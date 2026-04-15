@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RCS Gateway Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Icon pack -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Login Modal -->
+    <div id="login-overlay" class="overlay active">
+        <div class="glass-panel login-box">
+            <div class="logo-area">
+                <i class="ri-radar-line"></i>
+                <h2>RCS Nexus</h2>
+            </div>
+            <p>Admin Authentication Required</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="ri-user-line"></i>
+                    <input type="text" id="username" placeholder="Admin Username" required>
+                </div>
+                <div class="input-group">
+                    <i class="ri-lock-line"></i>
+                    <input type="password" id="password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn-glow">Enter Nexus system</button>
+            </form>
+            <div id="login-error" class="error-msg"></div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard-wrapper" class="wrapper hidden">
+        <!-- Sidebar -->
+        <aside class="glass-sidebar">
+            <div class="logo-area">
+                <i class="ri-radar-line"></i>
+                <h2>RCS Nexus</h2>
+            </div>
+            <nav>
+                <a href="#" class="nav-item active" data-target="overview"><i class="ri-dashboard-line"></i> Overview</a>
+                <a href="#" class="nav-item" data-target="sessions"><i class="ri-smartphone-line"></i> Sessions</a>
+                <a href="#" class="nav-item" data-target="blast"><i class="ri-send-plane-line"></i> Blast Queue</a>
+                <a href="#" class="nav-item" data-target="docs"><i class="ri-file-text-line"></i> API Docs</a>
+                <a href="#" class="nav-item" id="logout-btn"><i class="ri-logout-box-line"></i> Logout</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <div>
+                    <h1>System Overview</h1>
+                    <p class="subtitle">Real-time gateway telemetry & session metrics.</p>
+                </div>
+                <div class="header-status">
+                    <span class="pulse-dot"></span> System Live
+                </div>
+            </header>
+
+            <!-- Metrics Level -->
+            <section class="metrics-grid" id="view-overview">
+                <div class="glass-card stat-card">
+                    <div class="stat-icon pending"><i class="ri-loader-4-line"></i></div>
+                    <div class="stat-info">
+                        <h3>Pending Queue</h3>
+                        <h2 id="stat-pending">0</h2>
+                    </div>
+                </div>
+                <div class="glass-card stat-card">
+                    <div class="stat-icon sent"><i class="ri-check-double-line"></i></div>
+                    <div class="stat-info">
+                        <h3>Total Sent</h3>
+                        <h2 id="stat-sent">0</h2>
+                    </div>
+                </div>
+                <div class="glass-card stat-card">
+                    <div class="stat-icon delivered"><i class="ri-mail-check-line"></i></div>
+                    <div class="stat-info">
+                        <h3>Delivered / Read</h3>
+                        <h2 id="stat-delivered">0</h2>
+                    </div>
+                </div>
+                <div class="glass-card stat-card">
+                    <div class="stat-icon failed"><i class="ri-error-warning-line"></i></div>
+                    <div class="stat-info">
+                        <h3>Failed</h3>
+                        <h2 id="stat-failed">0</h2>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hardware Telemetry -->
+            <div class="glass-card" id="view-hardware" style="padding: 20px; display: flex; align-items: center; justify-content: space-between; margin-top: -5px;">
+                <div style="display: flex; gap: 30px; flex: 1;">
+                    <div style="flex: 1;">
+                        <h4 style="color: var(--text-muted); font-size: 13px; text-transform: uppercase;">RAM Usage</h4>
+                        <div style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; margin: 8px 0; overflow: hidden;">
+                            <div id="ram-progress" style="background: var(--accent); width: 0%; height: 100%; transition: width 1s;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                            <span id="ram-text" style="font-weight: 600;">0 MB / 0 MB</span>
+                            <span id="ram-percent" style="color: var(--warning);">0%</span>
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <h4 style="color: var(--text-muted); font-size: 13px; text-transform: uppercase;">CPU Processor</h4>
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
+                            <i class="ri-cpu-line" style="font-size: 24px; color: var(--success);"></i>
+                            <div>
+                                <div id="cpu-model" style="font-weight: 500; font-size: 14px;">Unknown CPU</div>
+                                <div id="cpu-cores" style="color: var(--text-muted); font-size: 12px;">0 Cores</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Layout -->
+            <div class="bottom-grid">
+                <!-- Sessions List -->
+                <div class="glass-card full-height" id="view-sessions">
+                    <div class="card-header">
+                        <h3>Active Sessions</h3>
+                        <div>
+                            <button class="btn-glow" style="padding: 6px 12px; font-size: 13px; border-radius: 6px; margin-right: 10px;" onclick="window.createSession()">+ Baru</button>
+                            <button class="icon-btn" onclick="fetchData()"><i class="ri-refresh-line"></i></button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Label</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessions-tbody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recent Messages -->
+                <div class="glass-card full-height" id="view-blast">
+                    <div class="card-header">
+                        <h3>Recent Broadcasts</h3>
+                        <span class="badge" id="total-msgs-badge">0 total</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Recipient</th>
+                                    <th>Message Snippet</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="messages-tbody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Docs View -->
+            <div class="glass-card full-height" id="view-docs" style="display: none; padding: 30px;">
+                <div class="card-header" style="margin-bottom: 20px;">
+                    <h2>Technical API Documentation</h2>
+                </div>
+                <div style="line-height: 1.6; color: var(--text-main); font-size: 15px; overflow-y: auto;">
+                    <p style="margin-bottom: 20px; color: var(--text-muted);">Gunakan panduan ini untuk mengintegrasikan pengiriman pesan Blast dan Screening Nomor melalui HTTP request ke server Anda.</p>
+                    
+                    <h3 style="color: var(--accent); margin-bottom: 10px;">1. Authentication</h3>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-family: monospace;">
+                        Header: Authorization: Bearer &lt;jwt_token&gt;
+                    </div>
+
+                    <h3 style="color: var(--accent); margin-bottom: 10px;">2. Manajemen Sesi Karyawan</h3>
+                    <p><b>POST</b> <code>/api/sessions</code></p>
+                    <p style="color: var(--text-muted); margin-bottom: 10px;">Membuat sesi Playwright headless baru untuk Karyawan yang login. Mengembalikan <code>session_id</code> yang digunakan di semua API lainnya.</p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-family: monospace; white-space: pre; color: var(--success);">
+{
+    "success": true,
+    "session_id": "812b32da-...",
+    "message": "Sesi berhasil dibuat, silakan scan QR Code",
+    "status": "pending_qr"
+}
+                    </div>
+
+                    <p><b>DELETE</b> <code>/api/sessions/:id</code></p>
+                    <p style="color: var(--text-muted); margin-bottom: 30px;">Hentikan dan hapus sesi aktif beserta browser Playwright di *backend*. Sangat disarankan dipanggil jika perangkat *disconnect* / saat agen menekan tombol Log Out.</p>
+
+                    <h3 style="color: var(--accent); margin-bottom: 10px;">3. Blast Message Endpoint</h3>
+                    <p><b>POST</b> <code>/api/rcs/send</code></p>
+                    <ul style="margin: 10px 0 20px 20px; color: var(--text-muted);">
+                        <li><b>Body JSON:</b></li>
+                        <li><code>recipients</code> (Array): Kumpulan nomor HP, misal <code>["081234", "089876"]</code></li>
+                        <li><code>message</code> (String): Isi teks promosi atau notifikasi.</li>
+                        <li><code>session_id</code> (String, optional): ID spesifik device pengirim, biarkan kosong agar sistem mencarinya secara otomatis.</li>
+                    </ul>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 30px; font-family: monospace; white-space: pre;">
+{
+    "recipients": ["081234567890"],
+    "message": "Halo, ini pesan blast promosi via sistem."
+}
+                    </div>
+                    <p><b>Contoh Response (Success):</b></p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 30px; font-family: monospace; white-space: pre; color: var(--success);">
+{
+    "success": true,
+    "message": "1 pesan berhasil masuk antrean.",
+    "message_ids": [45],
+    "session_id": "7475ba65-a709-4a0f-be61-620acad2f9b8"
+}
+                    </div>
+
+                    <h3 style="color: var(--accent); margin-bottom: 10px;">4. Screening Nomor (Cek RCS)</h3>
+                    <p><b>POST</b> <code>/api/rcs/screen</code></p>
+                    <ul style="margin: 10px 0 20px 20px; color: var(--text-muted);">
+                        <li><b>Body JSON:</b></li>
+                        <li><code>phone_numbers</code> (Array): Kumpulan nomor HP yang mau discreening.</li>
+                    </ul>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 30px; font-family: monospace; white-space: pre;">
+{
+    "phone_numbers": ["08111111111", "08222222222"]
+}
+                    </div>
+                    <p><b>Contoh Response (Success):</b></p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 30px; font-family: monospace; white-space: pre; color: var(--success);">
+{
+    "success": true,
+    "message": "2 nomor dimasukkan ke antrean screening."
+}
+                    </div>
+                    
+                    <p><b>GET</b> <code>/api/rcs/screen/results</code></p>
+                    <p style="color: var(--text-muted); margin-bottom: 10px;">Mendapatkan hasil antrean screening. Parameter kembalian <code>is_rcs_capable: 1</code> berarti Support RCS. <code>0</code> berarti jatuh ke SMS.</p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 30px; font-family: monospace; white-space: pre; color: var(--success);">
+{
+    "success": true,
+    "data": [
+        {
+            "phone_number": "08111111111",
+            "is_rcs_capable": 1,
+            "status": "done"
+        }
+    ]
+}
+                    </div>
+
+                    <h3 style="color: var(--accent); margin-bottom: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">5. Alur Integrasi QR Code (Untuk Frontend Karyawan)</h3>
+                    <p style="margin-bottom: 15px; color: var(--text-muted);">Panduan integrasi alur kerja menyambungkan sesi <i>Google Messages</i> pada layar kerja (dashboard Frontend) agen atau karyawan Anda.</p>
+                    
+                    <ul style="margin: 10px 0 20px 20px; color: var(--text-muted);">
+                        <li style="margin-bottom: 10px;">
+                            <b>1. Meminta Sesi Baru</b><br>
+                            Panggil <code>POST /api/sessions</code> dengan Token JWT karyawan untuk mendapatkan respon <code>session_id</code>.
+                        </li>
+                        <li style="margin-bottom: 10px;">
+                            <b>2. Visualisasi QR Code (& Auto Refresh)</b><br>
+                            Gunakan tag elemen gambar standar yang diarahkan ke file Stream API. Frontend wajib me-refresh gambar menggunakan tambahan stempel waktu (<i>timestamp</i>) agar gambar QR direfresh secara manual oleh browser setiap 2 detik.
+                        </li>
+                    </ul>
+                    
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-family: monospace; white-space: pre; overflow-x: auto;">
+&lt;!-- HTML --&gt;
+&lt;img id="qr-karyawan" src="http://[SERVER_IP]:3000/api/sessions/[SESSION_ID]/qr/image" style="background: white; padding: 10px;" /&gt;
+
+&lt;!-- Javascript --&gt;
+&lt;script&gt;
+  const qrImage = document.getElementById('qr-karyawan');
+  const sessionId = 'AMBIL_DARI_LANGKAH_1';
+
+  // Refresh gambar QR setiap 2 detik tanpa me-refresh halaman (mencegah kedip)
+  const intervalGambar = setInterval(() => {
+      qrImage.src = `http://[SERVER_IP]:3000/api/sessions/${sessionId}/qr/image?t=${new Date().getTime()}`;
+  }, 2000);
+&lt;/script&gt;
+                    </div>
+
+                    <ul style="margin: 10px 0 20px 20px; color: var(--text-muted);">
+                        <li style="margin-bottom: 10px;">
+                            <b>3. Cek Status Penyambungan</b><br>
+                            Selama gambar diperbarui, panggil <code>GET /api/sessions/[SESSION_ID]/status</code> setiap 3 detik. Jika hasilnya merespon <code>"active"</code>, hapus interval gambar via Javascript dan sembunyikan kotak QR Code-nya.
+                        </li>
+                    </ul>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- QR Modal -->
+    <div id="qr-overlay" class="overlay hidden">
+        <div class="glass-panel" style="display: flex; flex-direction: column; align-items: center; padding: 40px; position: relative;">
+            <button onclick="window.closeQrModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; color: var(--text-main); cursor: pointer;"><i class="ri-close-line"></i></button>
+            <h2 style="margin-bottom: 20px; color: var(--accent);">Device Pairing</h2>
+            <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; width: 250px; height: 250px; display: flex; align-items: center; justify-content: center;">
+                <img id="qr-modal-img" src="" style="max-width: 100%; max-height: 100%;">
+            </div>
+            <p style="text-align: center; color: var(--text-muted); font-size: 14px;">Buka Google Messages &gt; Device pairing<br>lalu scan kode QR ini.</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
