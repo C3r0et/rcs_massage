@@ -6,7 +6,7 @@ exports.login = async (req, res) => {
     
     try {
         // Alihkan HTTP request ke SSO Utama
-        const ssoResponse = await axios.post('http://127.0.0.1:4000/api/auth/login', {
+        const ssoResponse = await axios.post('https://sso-auth.sahabatsakinah.id/api/auth/login', {
             employee_id: employee_id || req.body.username, // mendukung 'username' untuk kompatibilitas FE lama
             password: password
         });
@@ -33,11 +33,17 @@ exports.login = async (req, res) => {
         });
 
     } catch (err) {
+        console.error('❌ SSO Proxy Error:', err.message);
         // Jika password di SSO salah / IP ke rate limiter, SSO akan mengembalikan error 401/429
         if (err.response) {
             return res.status(err.response.status).json(err.response.data);
         }
-        res.status(503).json({ success: false, error: 'Tidak dapat menghubungi Layanan SSO Pusat' });
+        res.status(503).json({ 
+            success: false, 
+            error: 'Tidak dapat menghubungi Layanan SSO Pusat',
+            details: err.message,
+            code: err.code 
+        });
     }
 };
 

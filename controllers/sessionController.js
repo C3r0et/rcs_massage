@@ -66,7 +66,7 @@ exports.getQRCode = async (req, res) => {
     const { id } = req.params;
     try {
         const [rows] = await db.query(
-            "SELECT status, qr_image, qr_updated_at FROM rcs_sessions WHERE id = ?",
+            "SELECT status, qr_image, qr_updated_at, error_info FROM rcs_sessions WHERE id = ?",
             [id]
         );
 
@@ -78,6 +78,10 @@ exports.getQRCode = async (req, res) => {
 
         if (session.status === 'active') {
             return res.json({ success: true, status: 'active', qr_image: null });
+        }
+
+        if (session.status === 'error') {
+            return res.json({ success: false, status: 'error', message: 'Gagal menjalankan browser.', error_info: session.error_info });
         }
 
         if (!session.qr_image) {
@@ -101,7 +105,7 @@ exports.getQRImage = async (req, res) => {
     const { id } = req.params;
     try {
         const [rows] = await db.query(
-            "SELECT status, qr_image FROM rcs_sessions WHERE id = ?",
+            "SELECT status, qr_image, error_info FROM rcs_sessions WHERE id = ?",
             [id]
         );
 
@@ -118,6 +122,16 @@ exports.getQRImage = async (req, res) => {
                 <rect width="200" height="200" fill="#e8f5e9" rx="12"/>
                 <text x="100" y="100" font-size="60" text-anchor="middle" dominant-baseline="central">✅</text>
                 <text x="100" y="155" font-size="14" text-anchor="middle" fill="#388e3c">Sesi Aktif</text>
+            </svg>`);
+        }
+
+        if (session.status === 'error') {
+            // Jika error, kirim gambar silang merah
+            res.setHeader('Content-Type', 'image/svg+xml');
+            return res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+                <rect width="200" height="200" fill="#ffebee" rx="12"/>
+                <text x="100" y="100" font-size="60" text-anchor="middle" dominant-baseline="central">❌</text>
+                <text x="100" y="155" font-size="14" text-anchor="middle" fill="#c62828">Browser Error</text>
             </svg>`);
         }
 
@@ -203,7 +217,7 @@ exports.getSessionStatus = async (req, res) => {
     const { id } = req.params;
     try {
         const [rows] = await db.query(
-            "SELECT id, label, phone_number, status, last_active FROM rcs_sessions WHERE id = ?",
+            "SELECT id, label, phone_number, status, last_active, error_info FROM rcs_sessions WHERE id = ?",
             [id]
         );
 

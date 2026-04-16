@@ -56,12 +56,17 @@ async function initDB() {
                 qr_image LONGTEXT NULL,
                 qr_updated_at TIMESTAMP NULL,
                 session_path VARCHAR(255) NOT NULL,
+                error_info TEXT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_active TIMESTAMP NULL,
                 INDEX idx_employee (employee_id),
                 INDEX idx_status (status)
             )
         `);
+        // Tambah kolom error_info jika belum ada
+        await connection.query(`
+            ALTER TABLE rcs_sessions ADD COLUMN IF NOT EXISTS error_info TEXT NULL AFTER status
+        `).catch(() => {});
         console.log('✅ Tabel rcs_sessions siap');
 
         connection.release();

@@ -50,7 +50,6 @@ class SessionManager {
         try {
             const context = await chromium.launchPersistentContext(sessionPath, {
                 headless: true,
-                channel: 'chrome',
                 viewport: { width: 1280, height: 800 },
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 args: [
@@ -178,7 +177,8 @@ class SessionManager {
             }
         } catch (err) {
             console.error(`❌ Gagal menjalankan browser sesi ${sessionId}:`, err.message);
-            await db.query("UPDATE rcs_sessions SET status = 'error' WHERE id = ?", [sessionId]).catch(() => {});
+            // Simpan detail error ke database agar bisa di-debug dari dashboard/API
+            await db.query("UPDATE rcs_sessions SET status = 'error', error_info = ? WHERE id = ?", [err.message, sessionId]).catch(() => {});
         }
     }
 
