@@ -49,7 +49,7 @@ class SessionManager {
     async launchBrowser(sessionId, sessionPath, initialStatus) {
         try {
             const context = await chromium.launchPersistentContext(sessionPath, {
-                headless: true,
+                headless: false, // Menjalankan browser "asli" di dalam Xvfb (Virtual Display) agar tidak terdeteksi bot
                 viewport: { width: 1280, height: 800 },
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
                 args: [
@@ -253,6 +253,8 @@ class SessionManager {
                     );
                 } else {
                     console.log(`[QR] ⚠️ Gagal mengekstrak QR code dari halaman.`);
+                    // DEBUG: Ambil screenshot halaman utuh untuk melihat ada apa di sana
+                    await page.screenshot({ path: path.join(__dirname, 'public/dashboard/debug_state.png') }).catch(() => {});
                 }
             } catch (e) {
                 console.log(`[QR] Error saat polling QR:`, e.message);
