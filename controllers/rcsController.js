@@ -158,7 +158,6 @@ exports.getMessages = async (req, res) => {
 };
 
 exports.getStats = async (req, res) => {
-    // Dipanggil oleh frontend Dashboard AutoCall untuk analytics chart
     try {
         const [rows] = await db.query(`
             SELECT status, COUNT(*) as count 
@@ -169,9 +168,24 @@ exports.getStats = async (req, res) => {
             acc[curr.status] = curr.count;
             return acc;
         }, {});
+
+        // Ambil Top 5 Karyawan paling aktif
+        const [employeeRows] = await db.query(`
+            SELECT employee_id, COUNT(*) as count 
+            FROM rcs_messages 
+            WHERE employee_id IS NOT NULL 
+            GROUP BY employee_id 
+            ORDER BY count DESC 
+            LIMIT 5
+        `);
         
-        res.json({ success: true, stats });
+        res.json({ 
+            success: true, 
+            stats,
+            employees: employeeRows 
+        });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'Gagal mengambil data statistik' });
     }
 };

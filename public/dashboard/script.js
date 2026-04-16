@@ -34,6 +34,8 @@ let msgFilters = {
     status: ''
 };
 
+let employeeChartInstance = null;
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('rcs_admin_token');
@@ -95,6 +97,7 @@ navItems.forEach(item => {
         if (targetView === 'overview') {
             viewOverview.style.display = 'grid';
             viewHardware.style.display = 'flex';
+            document.getElementById('analytics-section').style.display = 'block';
             viewSessions.style.display = 'flex';
             viewBlast.style.display = 'flex';
             viewDocs.style.display = 'none';
@@ -102,6 +105,7 @@ navItems.forEach(item => {
         } else if (targetView === 'sessions') {
             viewOverview.style.display = 'none';
             viewHardware.style.display = 'none';
+            document.getElementById('analytics-section').style.display = 'none';
             viewSessions.style.display = 'flex';
             viewBlast.style.display = 'none';
             viewDocs.style.display = 'none';
@@ -109,6 +113,7 @@ navItems.forEach(item => {
         } else if (targetView === 'blast') {
             viewOverview.style.display = 'none';
             viewHardware.style.display = 'none';
+            document.getElementById('analytics-section').style.display = 'none';
             viewSessions.style.display = 'none';
             viewBlast.style.display = 'flex';
             viewDocs.style.display = 'none';
@@ -116,6 +121,7 @@ navItems.forEach(item => {
         } else if (targetView === 'docs') {
             viewOverview.style.display = 'none';
             viewHardware.style.display = 'none';
+            document.getElementById('analytics-section').style.display = 'none';
             viewSessions.style.display = 'none';
             viewBlast.style.display = 'none';
             viewDocs.style.display = 'flex';
@@ -162,7 +168,56 @@ async function fetchStats() {
             sDelivered.innerText = (data.stats.delivered || 0) + (data.stats.read || 0);
             sFailed.innerText = data.stats.failed || 0;
         }
+
+        if (data.success && data.employees) {
+            updateEmployeeChart(data.employees);
+        }
     } catch (e) {}
+}
+
+function updateEmployeeChart(employees) {
+    const ctx = document.getElementById('employeeChart').getContext('2d');
+    const labels = employees.map(e => e.employee_id);
+    const counts = employees.map(e => e.count);
+
+    if (employeeChartInstance) {
+        employeeChartInstance.data.labels = labels;
+        employeeChartInstance.data.datasets[0].data = counts;
+        employeeChartInstance.update();
+    } else {
+        employeeChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Messages',
+                    data: counts,
+                    backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                    borderColor: 'rgb(99, 102, 241)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: 'rgba(255, 255, 255, 0.7)' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: 'rgba(255, 255, 255, 0.7)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
 }
 
 async function fetchSystem() {
