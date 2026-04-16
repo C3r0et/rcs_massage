@@ -20,6 +20,7 @@ async function initDB() {
             CREATE TABLE IF NOT EXISTS rcs_messages (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 session_id VARCHAR(36) NULL,
+                employee_id VARCHAR(50) NULL,
                 recipient VARCHAR(20) NOT NULL,
                 message_content TEXT NOT NULL,
                 status ENUM('pending', 'sent', 'delivered', 'read', 'failed') DEFAULT 'pending',
@@ -27,10 +28,13 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        // Tambah kolom session_id jika belum ada (upgrade dari versi lama)
+        // Tambah kolom session_id & employee_id jika belum ada (upgrade dari versi lama)
         await connection.query(`
             ALTER TABLE rcs_messages ADD COLUMN IF NOT EXISTS session_id VARCHAR(36) NULL AFTER id
-        `).catch(() => {}); // Abaikan jika sudah ada
+        `).catch(() => {});
+        await connection.query(`
+            ALTER TABLE rcs_messages ADD COLUMN IF NOT EXISTS employee_id VARCHAR(50) NULL AFTER session_id
+        `).catch(() => {});
         console.log('✅ Tabel rcs_messages siap');
 
         await connection.query(`

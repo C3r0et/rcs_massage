@@ -153,22 +153,52 @@
                 <!-- Recent Messages -->
                 <div class="glass-card full-height" id="view-blast">
                     <div class="card-header">
-                        <h3>Recent Broadcasts</h3>
-                        <span class="badge" id="total-msgs-badge">0 total</span>
+                        <h3>Blast Queue History</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="btn-export-excel" class="btn-glow" style="padding: 6px 12px; font-size: 13px; background: var(--success);"><i class="ri-file-excel-2-line"></i> Export Excel</button>
+                            <span class="badge" id="total-msgs-badge">0 total</span>
+                        </div>
+                    </div>
+                    <!-- Filter Bar -->
+                    <div class="filter-bar" style="padding: 15px; display: flex; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap;">
+                        <input type="text" id="filter-recipient" placeholder="Filter Recipient..." style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 5px 10px; border-radius: 4px; font-size: 13px; flex: 1; min-width: 150px;">
+                        <input type="text" id="filter-employee" placeholder="Filter Employee ID..." style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 5px 10px; border-radius: 4px; font-size: 13px; flex: 1; min-width: 150px;">
+                        <select id="filter-status" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 5px 10px; border-radius: 4px; font-size: 13px; min-width: 120px;">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="sent">Sent</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="read">Read</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                        <button class="icon-btn" onclick="applyFilters()" title="Apply Filters"><i class="ri-search-line"></i></button>
+                        <button class="icon-btn" onclick="resetFilters()" title="Reset"><i class="ri-restart-line"></i></button>
                     </div>
                     <div class="table-responsive">
                         <table class="modern-table">
                             <thead>
                                 <tr>
+                                    <th>Employee ID</th>
                                     <th>Recipient</th>
                                     <th>Message Snippet</th>
                                     <th>Status</th>
+                                    <th>Date</th>
                                 </tr>
                             </thead>
                             <tbody id="messages-tbody">
                                 <!-- JS Populated -->
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Pagination Controls -->
+                    <div class="pagination-area" style="padding: 15px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 13px; color: var(--text-muted);">
+                            Showing <span id="page-info">0-0 of 0</span>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="icon-btn" id="prev-page" onclick="changePage(-1)"><i class="ri-arrow-left-s-line"></i></button>
+                            <button class="icon-btn" id="next-page" onclick="changePage(1)"><i class="ri-arrow-right-s-line"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>

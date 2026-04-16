@@ -25,6 +25,15 @@ const viewHardware = document.getElementById('view-hardware');
 
 let pollInterval;
 
+// Blast Queue State
+let msgCurrentPage = 0;
+const msgLimit = 10;
+let msgFilters = {
+    recipient: '',
+    employee_id: '',
+    status: ''
+};
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('rcs_admin_token');
@@ -131,7 +140,10 @@ async function fetchData() {
     fetchStats();
     fetchSystem();
     fetchSessions();
-    fetchMessages();
+    // fetchMessages dipanggil terpisah atau dengan interval jika tidak sedang memfilter
+    if (!msgFilters.recipient && !msgFilters.employee_id && !msgFilters.status && msgCurrentPage === 0) {
+        fetchMessages();
+    }
 }
 
 function startPolling() {
@@ -211,25 +223,125 @@ async function fetchSessions() {
 
 async function fetchMessages() {
     try {
-        const res = await fetch(`${API_BASE}/admin/rcs/messages`, { headers: getHeaders() });
+        const offset = msgCurrentPage * msgLimit;
+        let url = `${API_BASE}/admin/rcs/messages?limit=${msgLimit}&offset=${offset}`;
+        
+        if (msgFilters.recipient) url += `&recipient=${encodeURIComponent(msgFilters.recipient)}`;
+        if (msgFilters.employee_id) url += `&employee_id=${encodeURIComponent(msgFilters.employee_id)}`;
+        if (msgFilters.status) url += `&status=${encodeURIComponent(msgFilters.status)}`;
+
+        const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         
         if (data.success && data.data) {
             tbodyMessages.innerHTML = '';
-            totalMsgsBadge.innerText = `${data.data.length} total`;
             
-            // Show only last 10 messages
-            data.data.slice(0, 10).forEach(m => {
+            const total = data.pagination?.total || 0;
+            totalMsgsBadge.innerText = `${total} total`;
+            
+            data.data.forEach(m => {
                 const tr = document.createElement('tr');
+                const dateStr = new Date(m.created_at).toLocaleString('id-ID');
                 tr.innerHTML = `
+                    <td><strong>${m.employee_id || '-'}</strong></td>
                     <td>${m.recipient}</td>
-                    <td><span style="opacity:0.8; font-size:13px">${m.message_content.substring(0, 30)}${m.message_content.length > 30 ? '...' : ''}</span></td>
+                    <td><span style="opacity:0.8; font-size:13px" title="${m.message_content}">${m.message_content.substring(0, 30)}${m.message_content.length > 30 ? '...' : ''}</span></td>
                     <td><span class="status-badge status-${m.status}">${m.status.toUpperCase()}</span></td>
+                    <td style="font-size:12px; color:var(--text-muted)">${dateStr}</td>
                 `;
                 tbodyMessages.appendChild(tr);
             });
+
+            // Update Pagination Info
+            const start = total === 0 ? 0 : offset + 1;
+            const end = Math.min(offset + msgLimit, total);
+            document.getElementById('page-info').innerText = `${start}-${end} of ${total}`;
+            
+            document.getElementById('prev-page').disabled = (msgCurrentPage === 0);
+            document.getElementById('next-page').disabled = (end >= total);
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error('Fetch messages error:', e);
+    }
+}
+
+// Filter Logic
+window.applyFilters = function() {
+    msgFilters.recipient = document.getElementById('filter-recipient').value;
+    msgFilters.employee_id = document.getElementById('filter-employee').value;
+    msgFilters.status = document.getElementById('filter-status').value;
+    msgCurrentPage = 0; // Reset ke halaman 1
+    fetchMessages();
+};
+
+window.resetFilters = function() {
+    document.getElementById('filter-recipient').value = '';
+    document.getElementById('filter-employee').value = '';
+    document.getElementById('filter-status').selectedIndex = 0;
+    msgFilters = { recipient: '', employee_id: '', status: '' };
+    msgCurrentPage = 0;
+    fetchMessages();
+};
+
+window.changePage = function(dir) {
+    msgCurrentPage += dir;
+    if (msgCurrentPage < 0) msgCurrentPage = 0;
+    fetchMessages();
+};
+
+// Export Logic
+document.getElementById('btn-export-excel').addEventListener('click', async () => {
+    try {
+        const btn = document.getElementById('btn-export-excel');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Exporting...';
+        btn.disabled = true;
+
+        let url = `${API_BASE}/admin/rcs/messages?all=true`;
+        if (msgFilters.recipient) url += `&recipient=${encodeURIComponent(msgFilters.recipient)}`;
+        if (msgFilters.employee_id) url += `&employee_id=${encodeURIComponent(msgFilters.employee_id)}`;
+        if (msgFilters.status) url += `&status=${encodeURIComponent(msgFilters.status)}`;
+
+        const res = await fetch(url, { headers: getHeaders() });
+        const data = await res.json();
+
+        if (data.success && data.data) {
+            exportToCsv(data.data);
+        }
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    } catch (e) {
+        alert('Gagal mendownload data export');
+        console.error(e);
+    }
+});
+
+function exportToCsv(rows) {
+    const filename = `RCS_Blast_Log_${new Date().toISOString().split('T')[0]}.csv`;
+    const headers = ['ID', 'Employee ID', 'Recipient', 'Message', 'Status', 'Date'];
+    
+    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+    
+    rows.forEach(r => {
+        const rowData = [
+            r.id,
+            r.employee_id || '',
+            r.recipient,
+            `"${r.message_content.replace(/"/g, '""')}"`, // Escape quotes for CSV
+            r.status,
+            new Date(r.created_at).toLocaleString('id-ID')
+        ];
+        csvContent += rowData.join(",") + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 // Fitur tambahan: Menghapus / Disconnect Sesi

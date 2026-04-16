@@ -1,5 +1,17 @@
 const db = require('../config/db');
 
+function normalizePhoneNumber(phone) {
+    if (!phone) return '';
+    let p = String(phone).trim().replace(/[^\d+]/g, ''); // Ambil angka dan +
+    if (p.startsWith('+')) p = p.substring(1);
+    if (p.startsWith('0')) {
+        p = '62' + p.substring(1);
+    } else if (p.startsWith('8')) {
+        p = '62' + p;
+    }
+    return p;
+}
+
 // POST /api/rcs/screen
 // Terima daftar nomor, masukkan ke antrean screening
 exports.submitScreening = async (req, res) => {
@@ -14,7 +26,7 @@ exports.submitScreening = async (req, res) => {
         let skipped = 0;
 
         for (const phone of numbers) {
-            const cleaned = phone.trim();
+            const cleaned = normalizePhoneNumber(phone);
             // Gunakan INSERT IGNORE agar nomor yang sudah ada tidak error (unik per nomor)
             const [result] = await db.query(
                 `INSERT IGNORE INTO rcs_screening (phone_number, status) VALUES (?, 'pending')`,

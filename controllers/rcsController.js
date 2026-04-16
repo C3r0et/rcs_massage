@@ -1,5 +1,18 @@
 const db = require('../config/db');
 
+function normalizePhoneNumber(phone) {
+    if (!phone) return '';
+    let p = String(phone).trim().replace(/[^\d+]/g, ''); // Ambil angka dan +
+    if (p.startsWith('+')) p = p.substring(1);
+    if (p.startsWith('0')) {
+        p = '62' + p.substring(1);
+    } else if (p.startsWith('8')) {
+        p = '62' + p;
+    }
+    // Jika hanya angka 62 saja atau pendek, biarkan apa adanya (mungkin error)
+    return p;
+}
+
 exports.sendMessage = async (req, res) => {
     const { recipient, recipients, message, session_id, employee_id } = req.body;
 
@@ -33,9 +46,10 @@ exports.sendMessage = async (req, res) => {
     try {
         const insertedIds = [];
         for (const phone of recipientList) {
+            const normalized = normalizePhoneNumber(phone);
             const [result] = await db.query(
-                'INSERT INTO rcs_messages (session_id, recipient, message_content, status) VALUES (?, ?, ?, ?)',
-                [targetSessionId, phone.trim(), message, 'pending']
+                'INSERT INTO rcs_messages (session_id, employee_id, recipient, message_content, status) VALUES (?, ?, ?, ?, ?)',
+                [targetSessionId, employee_id || null, normalized, message, 'pending']
             );
             insertedIds.push(result.insertId);
         }
@@ -84,11 +98,61 @@ exports.webhookStatus = async (req, res) => {
 };
 
 exports.getMessages = async (req, res) => {
-    // Dipanggil oleh frontend Dashboard AutoCall
     try {
-        const [rows] = await db.query('SELECT * FROM rcs_messages ORDER BY created_at DESC');
-        res.json({ success: true, data: rows });
+        const { recipient, employee_id, status, limit, offset, all } = req.query;
+        let query = 'SELECT * FROM rcs_messages';
+        const params = [];
+        const conditions = [];
+
+        if (recipient) {
+            conditions.push('recipient LIKE ?');
+            params.push(`%${recipient}%`);
+        }
+        if (employee_id) {
+            conditions.push('employee_id LIKE ?');
+            params.push(`%${employee_id}%`);
+        }
+        if (status) {
+            conditions.push('status = ?');
+            params.push(status);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        // Jika 'all' ada, jangan beri limit (untuk export excel)
+        if (!all) {
+            const l = parseInt(limit) || 10;
+            const o = parseInt(offset) || 0;
+            query += ' LIMIT ? OFFSET ?';
+            params.push(l, o);
+        }
+
+        const [rows] = await db.query(query, params);
+
+        // Ambil total count untuk pagination (jika bukan export)
+        let totalCount = 0;
+        if (!all) {
+            let countQuery = 'SELECT COUNT(*) as count FROM rcs_messages';
+            if (conditions.length > 0) countQuery += ' WHERE ' + conditions.join(' AND ');
+            const [countRes] = await db.query(countQuery, params.slice(0, conditions.length));
+            totalCount = countRes[0].count;
+        }
+
+        res.json({ 
+            success: true, 
+            data: rows,
+            pagination: !all ? {
+                total: totalCount,
+                limit: parseInt(limit) || 10,
+                offset: parseInt(offset) || 0
+            } : undefined
+        });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'Gagal mengambil data riwayat pesan' });
     }
 };
