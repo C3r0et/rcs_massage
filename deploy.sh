@@ -42,7 +42,8 @@ fi
 log_section "TAHAP 2: Clone/Update Repository"
 if [ -d "$APP_DIR/.git" ]; then
     cd "$APP_DIR"
-    git pull origin "$GITHUB_BRANCH"
+    git fetch --all
+    git reset --hard origin/"$GITHUB_BRANCH"
 else
     git clone --branch "$GITHUB_BRANCH" "$GITHUB_REPO" "$APP_DIR"
     cd "$APP_DIR"
