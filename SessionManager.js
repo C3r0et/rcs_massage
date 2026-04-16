@@ -69,11 +69,11 @@ class SessionManager {
 
             const page = await context.newPage();
             
-            // OPTIMASI MEMORI: Cegah Chrome memuat CSS, Font, dan Video!
+            // OPTIMASI: Muat CSS/Font agar deteksi elemen akurat, blokir media berat saja
             await page.route('**/*', route => {
                 const type = route.request().resourceType();
-                if (['stylesheet', 'font', 'media'].includes(type)) {
-                    route.abort(); // Jangan habiskan RAM untuk mempercantik UI
+                if (['media', 'video'].includes(type)) {
+                    route.abort();
                 } else {
                     route.continue();
                 }
@@ -196,8 +196,8 @@ class SessionManager {
                     return;
                 }
 
-                // Cek apakah sudah login (conversation list muncul)
-                const isLoggedIn = await page.$('a[href*="/web/conversations/new"], mw-conversation-list, .mbc-fab');
+                // Cek apakah sudah login (conversation list muncul atau tombol chat ada)
+                const isLoggedIn = await page.$('a[href*="/web/conversations/new"], mw-conversation-list, .mbc-fab, [data-e2e-conversation-list], .main-nav, .search-container');
                 if (isLoggedIn) {
                     console.log(`✅ Sesi ${sessionId} AKTIF. QR berhasil discan!`);
                     clearInterval(interval);
